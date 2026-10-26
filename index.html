@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bifat – testul telefonului second-hand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&display=swap" rel="stylesheet">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root{
+  --bg:#E9EEF2; --paper:#FFFFFF; --ink:#13202E; --muted:#5A6878; --line:#C9D3DC;
+  --pass:#1E7F55; --pass-bg:#DDF1E7; --fail:#B73A26; --fail-bg:#F8E0DA; --skip:#8A6A1C; --skip-bg:#F5ECD2;
+  --tag:#F2C94C; --accent:#1D4F91; --accent-ink:#FFFFFF;
+  color-scheme:light;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1720; --paper:#18232F; --ink:#E6EDF3; --muted:#9AA8B6; --line:#2C3B4A;
+    --pass:#5CC995; --pass-bg:#173528; --fail:#F08A74; --fail-bg:#3A1D18; --skip:#E5C267; --skip-bg:#3A3018;
+    --tag:#E5C267; --accent:#7FB0F0; --accent-ink:#0F1720; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1720; --paper:#18232F; --ink:#E6EDF3; --muted:#9AA8B6; --line:#2C3B4A;
+  --pass:#5CC995; --pass-bg:#173528; --fail:#F08A74; --fail-bg:#3A1D18; --skip:#E5C267; --skip-bg:#3A3018;
+  --tag:#E5C267; --accent:#7FB0F0; --accent-ink:#0F1720; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:560px;margin:0 auto;padding:20px 18px 40px}
+header.top{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.logo{font-weight:800;font-stretch:75%;font-size:26px;letter-spacing:-.5px;display:flex;align-items:center;gap:8px}
+.logo .box{width:28px;height:28px;border:3px solid var(--ink);border-radius:6px;display:grid;place-items:center}
+.logo .box svg{width:18px;height:18px}
+.progress{margin-left:auto;font-size:14px;color:var(--muted)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:22px}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+h1{font-weight:800;font-stretch:80%;font-size:clamp(34px,9vw,46px);line-height:1.02;margin:6px 0 14px;letter-spacing:-.8px}
+h2{font-weight:800;font-stretch:85%;font-size:28px;line-height:1.1;margin:4px 0 10px}
+p{margin:0 0 14px}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
+button,.btn{font:inherit;font-weight:700;border:0;border-radius:12px;padding:15px 18px;cursor:pointer;width:100%;display:block;text-align:center;text-decoration:none}
+.primary{background:var(--accent);color:var(--accent-ink)}
+.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.row{display:flex;gap:10px;margin-top:12px}
+.row>*{flex:1}
+.yes{background:var(--pass-bg);color:var(--pass);border:2px solid var(--pass)}
+.no{background:var(--fail-bg);color:var(--fail);border:2px solid var(--fail)}
+.skip{background:none;border:0;color:var(--muted);font-weight:600;padding:10px;margin-top:6px;text-decoration:underline}
+button:focus-visible,.btn:focus-visible,input:focus-visible,label.up:focus-within{outline:3px solid var(--tag);outline-offset:2px}
+ul.list{list-style:none;padding:0;margin:0}
+ul.list li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+ul.list li:last-child{border-bottom:0}
+.mark{flex:none;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-weight:800;font-size:15px}
+.mark.p{background:var(--pass-bg);color:var(--pass)}.mark.f{background:var(--fail-bg);color:var(--fail)}.mark.s{background:var(--skip-bg);color:var(--skip)}
+.note{font-size:14px;color:var(--muted)}
+/* full-screen overlays */
+.overlay{position:fixed;inset:0;z-index:50;display:none}
+.overlay.on{display:block}
+#colorScreen{display:none;place-items:end center;padding:0 0 calc(24px + env(safe-area-inset-bottom,0px))}
+#colorScreen.on{display:grid}
+#colorScreen .hint{background:rgba(0,0,0,.55);color:#fff;font-size:14px;padding:8px 14px;border-radius:20px;transition:opacity .4s}
+#colorScreen .hint.hide{opacity:0}
+#touchGrid{display:none;grid-template-columns:repeat(6,1fr);background:var(--bg)}
+#touchGrid.on{display:grid}
+#touchGrid div{border:1px solid var(--line);background:var(--paper)}
+#touchGrid div.hit{background:var(--pass)}
+#touchBar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);font-size:14px;justify-content:space-between;align-items:center;gap:10px}
+#touchBar.on{display:flex}
+#touchBar button{width:auto;padding:8px 14px;background:var(--paper);color:var(--ink);font-size:14px}
+video{width:100%;border-radius:12px;background:#000;aspect-ratio:3/4;object-fit:cover;display:block}
+.meter{height:12px;background:var(--line);border-radius:6px;overflow:hidden;margin:10px 0}
+.meter i{display:block;height:100%;width:0;background:var(--pass);transition:width .1s}
+label.up{display:flex;align-items:center;gap:12px;border:2px dashed var(--line);border-radius:12px;padding:14px;cursor:pointer;margin:10px 0}
+label.up input{position:absolute;opacity:0;width:1px;height:1px}
+label.up img{width:56px;height:56px;object-fit:cover;border-radius:8px;flex:none;background:var(--line)}
+label.up .ph{width:56px;height:56px;border-radius:8px;flex:none;background:var(--line);display:grid;place-items:center;font-size:24px;color:var(--muted)}
+input[type=text],input[type=number]{font:inherit;width:100%;padding:12px;border:2px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+.field{margin:10px 0}
+.field span{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+/* report tag */
+.tag{position:relative;background:var(--paper);border:2px solid var(--ink);border-radius:16px;padding:22px 18px 18px;margin-top:8px}
+.tag::before{content:"";position:absolute;top:14px;right:18px;width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);background:var(--bg)}
+.stamp{display:inline-flex;align-items:center;gap:10px;background:var(--tag);color:#13202E;font-weight:800;font-stretch:75%;font-size:30px;padding:6px 14px;border-radius:10px;transform:rotate(-2deg);margin:4px 0 14px}
+.stamp.warn{background:var(--fail-bg);color:var(--fail)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:15px;margin:10px 0 6px}
+.kv b{font-weight:600;color:var(--muted)}
+.code{font-weight:800;font-stretch:75%;font-size:34px;letter-spacing:4px}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.thumbs img{width:76px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+textarea{font:inherit;font-size:14px;width:100%;min-height:140px;padding:12px;border:2px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>Bifat</div>
+    <div class="progress" id="prog"></div>
+  </header>
+  <div class="bar"><i id="barFill"></i></div>
+  <main id="app" aria-live="polite"></main>
+</div>
+
+<div id="colorScreen" class="overlay" role="button" tabindex="0" aria-label="Atinge ecranul pentru culoarea următoare"><span class="hint" id="colorHint"></span></div>
+<div id="touchGrid" class="overlay" aria-label="Grilă de test pentru atingere"></div>
+<div id="touchBar"><span id="touchCount"></span><button type="button" id="touchStop">Am terminat</button></div>
+
+<script>
+(() => {
+"use strict";
+const app = document.getElementById("app");
+const R = {}; // results: key -> {s:'p'|'f'|'s', note}
+const shots = {}; // key -> {blob,url}
+const info = {model:"", imei:"", battery:"", account:""};
+let sample = null, sampleImages = false;
+
+const steps = ["intro","screen","touch","camera","audio","motion","vibrate","biometric","battery","shots","report"];
+const titles = {screen:"Ecranul",touch:"Atingerea",camera:"Camerele",audio:"Difuzorul și microfonul",motion:"Senzorii de mișcare",vibrate:"Vibrația",biometric:"Deblocarea",battery:"Bateria",shots:"Capturi de ecran"};
+let idx = 0;
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+let detected = "";
+function iosFamily(){
+  const w = Math.min(screen.width,screen.height), hh = Math.max(screen.width,screen.height), d = Math.round(window.devicePixelRatio||1);
+  const map = {"320x568@2":"iPhone SE (gen. 1) sau 5s","375x667@2":"iPhone 6/7/8 sau SE (gen. 2/3)","414x736@3":"iPhone 6/7/8 Plus","375x812@3":"iPhone X/XS/11 Pro/12 mini/13 mini","414x896@2":"iPhone XR sau 11","414x896@3":"iPhone XS Max sau 11 Pro Max","390x844@3":"iPhone 12/13/14 sau 12/13 Pro","428x926@3":"iPhone 12/13 Pro Max sau 14 Plus","393x852@3":"iPhone 14 Pro/15/15 Pro/16","430x932@3":"iPhone 14 Pro Max/15 Plus/15 Pro Max/16 Plus","402x874@3":"iPhone 16 Pro sau mai nou","440x956@3":"iPhone 16 Pro Max sau mai nou"};
+  return map[`${w}x${hh}@${d}`] || "";
+}
+function baseGuess(){
+  const ua = navigator.userAgent;
+  if (isIOS){ const v = (ua.match(/OS (\d+)_(\d+)/)||[]).slice(1).join("."); const f = iosFamily(); return (f ? f + " (estimat după ecran)" : "iPhone") + (v ? ", iOS " + v : ""); }
+  const m = ua.match(/Android ([\d.]+);\s*([^;)]+)/);
+  if (m && m[2].trim() !== "K") return m[2].replace(/Build.*$/,"").trim() + " (Android " + m[1] + ")";
+  return "Telefon Android (browserul nu transmite modelul)";
+}
+function deviceGuess(){ return info.model || detected || baseGuess(); }
+async function detectModel(){
+  try{
+    if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues){
+      const v = await navigator.userAgentData.getHighEntropyValues(["model","platformVersion"]);
+      if (v.model) detected = v.model + " (Android" + (v.platformVersion ? " " + v.platformVersion.split(".")[0] : "") + ")";
+    }
+  }catch(e){}
+}
+
+function h(html){ app.innerHTML = html; window.scrollTo(0,0); const f = app.querySelector("h1,h2"); if (f){ f.tabIndex=-1; f.focus({preventScroll:true}); } }
+function setProgress(){
+  const total = steps.length - 2;
+  const n = Math.min(Math.max(idx,0), total);
+  document.getElementById("barFill").style.width = (idx === 0 ? 0 : Math.round(n/total*100)) + "%";
+  document.getElementById("prog").textContent = (idx>0 && idx<steps.length-1) ? `Pasul ${idx} din ${total}` : "";
+}
+function go(i){ idx = i; setProgress(); render[steps[idx]](); }
+function next(){ go(idx+1); }
+function enterFS(el){ const f = el.requestFullscreen || el.webkitRequestFullscreen; if (!f) return; try{ const p = f.call(el, {navigationUI:"hide"}); if (p && p.catch) p.catch(()=>{}); }catch(e){} }
+function exitFS(){ const d = document; if (d.fullscreenElement || d.webkitFullscreenElement){ const f = d.exitFullscreen || d.webkitExitFullscreen; try{ const p = f.call(d); if (p && p.catch) p.catch(()=>{}); }catch(e){} } }
+function done(key,s,note){ R[key] = {s, note: note||""}; next(); }
+function answer(key, yesNote, noNote){
+  return `<div class="row"><button class="yes" data-a="p">Da, e în regulă</button><button class="no" data-a="f">Nu, are o problemă</button></div>
+  <button class="skip" data-a="s">Sari peste acest test</button>`;
+}
+function bindAnswer(key){
+  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => done(key, b.dataset.a, b.dataset.a==="s" ? "Sărit" : ""));
+}
+
+const render = {
+intro(){
+  h(`<h1>Testează telefonul înainte să-l cumperi</h1>
+  <p>Rulează pe telefonul care se vinde. Durează cam 4 minute și la final iese un raport cu un cod unic, pe care îl trimiți cumpărătorului.</p>
+  <div class="card"><div class="kv"><b>Telefon detectat</b><span>${esc(deviceGuess())}</span><b>Ce testăm</b><span>ecran, atingere, camere, sunet, senzori, baterie, IMEI și blocarea contului</span></div></div>
+  <p class="note">După ce apeși „Începe testul”, browserul îți cere o singură dată acces la cameră, microfon${isIOS ? " și senzorii de mișcare" : ""}. Apasă „Permite”. Nimic nu pleacă de pe telefon în acest prototip: raportul rămâne aici, până îl copiezi tu.</p>
+  <div class="field"><span>Modelul exact (opțional)</span><input type="text" id="fModel" placeholder="de ex. iPhone 13 Pro 128 GB" value="${esc(info.model)}"></div>
+  <p class="note">Browserul nu spune mereu modelul exact. Îl poți scrie aici sau îl citim din captura „Despre telefon” de la final.</p>
+  <button class="primary" id="start">Începe testul</button>`);
+  document.getElementById("start").onclick = async (ev) => {
+    info.model = document.getElementById("fModel").value.trim();
+    const b = ev.currentTarget; b.disabled = true; b.textContent = "Se cer permisiunile…";
+    const mot = (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") ? DeviceMotionEvent.requestPermission().catch(() => "denied") : Promise.resolve("granted");
+    const med = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:true}).then(s => { s.getTracks().forEach(t => t.stop()); return "granted"; }).catch(() => "denied") : Promise.resolve("denied");
+    await Promise.all([mot, med]);
+    next();
+  };
+},
+screen(){
+  h(`<h2>${titles.screen}</h2><p>Ecranul se va umple pe rând cu alb, negru, roșu, verde și albastru. Uită-te după pixeli morți, pete sau zone decolorate. Atinge ecranul ca să treci la culoarea următoare.</p>
+  <button class="primary" id="go">Pornește testul de culori</button>`);
+  document.getElementById("go").onclick = () => {
+    const cols = [["#FFFFFF","alb"],["#000000","negru"],["#FF0000","roșu"],["#00FF00","verde"],["#0000FF","albastru"]];
+    const el = document.getElementById("colorScreen"), hint = document.getElementById("colorHint");
+    let c = 0, ht = null;
+    const show = () => { el.style.background = cols[c][0]; hint.textContent = `${c+1}/5 – ${cols[c][1]}. Atinge pentru următoarea.`; hint.classList.remove("hide"); clearTimeout(ht); ht = setTimeout(() => hint.classList.add("hide"), 1500); };
+    el.classList.add("on"); enterFS(document.documentElement); show(); el.focus();
+    const adv = () => { c++; if (c >= cols.length){ clearTimeout(ht); exitFS(); el.classList.remove("on"); el.onclick = el.onkeydown = null;
+        h(`<h2>${titles.screen}</h2><p>Ai văzut pixeli morți, pete, linii sau zone decolorate?</p>
+        <div class="row"><button class="yes" data-a="p">Nu, ecranul arată bine</button><button class="no" data-a="f">Da, am văzut ceva</button></div>
+        <button class="skip" data-a="s">Sari peste acest test</button>`); bindAnswer("screen"); return; } show(); };
+    el.onclick = adv; el.onkeydown = e => { if (e.key===" "||e.key==="Enter"){ e.preventDefault(); adv(); } };
+  };
+},
+touch(){
+  h(`<h2>${titles.touch}</h2><p>Ecranul se împarte în pătrățele. Trece cu degetul peste toate până se fac verzi. Așa verificăm dacă touch-ul răspunde pe toată suprafața.</p>
+  <button class="primary" id="go">Pornește grila</button><button class="skip" id="sk">Sari peste acest test</button>`);
+  document.getElementById("sk").onclick = () => done("touch","s","Sărit");
+  document.getElementById("go").onclick = () => {
+    const grid = document.getElementById("touchGrid"), bar = document.getElementById("touchBar"), cnt = document.getElementById("touchCount");
+    const rows = 11, cols = 6; grid.style.gridTemplateRows = `repeat(${rows},1fr)`; grid.innerHTML = "";
+    for (let i=0;i<rows*cols;i++) grid.appendChild(document.createElement("div"));
+    let hit = 0; const total = rows*cols;
+    const upd = () => cnt.textContent = `${hit} din ${total} atinse`;
+    const mark = (x,y) => { const t = document.elementFromPoint(x,y); if (t && t.parentNode===grid && !t.classList.contains("hit")){ t.classList.add("hit"); hit++; upd(); if (hit===total) finish(true); } };
+    const mv = e => { e.preventDefault(); for (const t of e.touches) mark(t.clientX,t.clientY); };
+    const pm = e => { if (e.buttons) mark(e.clientX,e.clientY); };
+    grid.addEventListener("touchstart",mv,{passive:false}); grid.addEventListener("touchmove",mv,{passive:false}); grid.addEventListener("pointermove",pm); grid.addEventListener("pointerdown",e=>mark(e.clientX,e.clientY));
+    grid.classList.add("on"); bar.classList.add("on"); enterFS(document.documentElement); upd();
+    const finish = (auto) => {
+      exitFS(); grid.classList.remove("on"); bar.classList.remove("on");
+      grid.removeEventListener("touchstart",mv); grid.removeEventListener("touchmove",mv); grid.removeEventListener("pointermove",pm);
+      const pct = Math.round(hit/total*100);
+      if (auto) return done("touch","p","Toate zonele au răspuns");
+      h(`<h2>${titles.touch}</h2><p>Au răspuns ${pct}% din zone. Au rămas zone care nu reacționau deloc la atingere?</p>
+      <div class="row"><button class="yes" data-a="p">Nu, am sărit doar unele</button><button class="no" data-a="f">Da, unele nu răspund</button></div>`);
+      app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => done("touch", b.dataset.a, `${pct}% din zone atinse`));
+    };
+    document.getElementById("touchStop").onclick = () => finish(false);
+  };
+},
+camera(){
+  let stream = null, facing = "environment", phase = 0; const res = {};
+  const stop = () => { if (stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } };
+  const show = async () => {
+    const name = facing==="environment" ? "Camera din spate" : "Camera din față";
+    h(`<h2>${titles.camera}</h2><p>${name}: imaginea e clară, fără pete, crăpături sau zone negre?</p>
+    <video id="v" playsinline muted autoplay aria-label="${name}"></video><p class="note" id="camErr"></p>
+    <div class="row"><button class="yes" id="y">Da, e clară</button><button class="no" id="n">Nu, are o problemă</button></div>
+    <button class="skip" id="s">Nu pot testa această cameră</button>`);
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false});
+      document.getElementById("v").srcObject = stream;
+    }catch(e){ document.getElementById("camErr").textContent = "Camera nu a pornit. Verifică permisiunea din browser sau marchează testul ca netestat."; }
+    const nextCam = (r) => { res[facing] = r; stop(); if (phase===0){ phase=1; facing="user"; show(); } else {
+        const vals = Object.values(res); const s = vals.includes("f") ? "f" : vals.every(v=>v==="s") ? "s" : vals.includes("s") ? "s" : "p";
+        const note = `Spate: ${lbl(res.environment)}, față: ${lbl(res.user)}`; done("camera", s, note); } };
+    document.getElementById("y").onclick = () => nextCam("p");
+    document.getElementById("n").onclick = () => nextCam("f");
+    document.getElementById("s").onclick = () => nextCam("s");
+  };
+  show();
+},
+audio(){
+  h(`<h2>${titles.audio}</h2><p>Telefonul cântă trei tonuri scurte și le ascultă singur prin microfon. Ține volumul sus și nu acoperi difuzorul.</p>
+  <div class="meter"><i id="m"></i></div><p class="note" id="st">Gata de pornire.</p>
+  <button class="primary" id="go">Pornește testul de sunet</button><div id="after"></div>`);
+  document.getElementById("go").onclick = async (ev) => {
+    ev.target.disabled = true; const st = document.getElementById("st"), m = document.getElementById("m");
+    let stream, ctx;
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      ctx = new (window.AudioContext||window.webkitAudioContext)(); await ctx.resume();
+    }catch(e){ st.textContent = "Microfonul nu a pornit, deci nu pot verifica automat. Răspunde tu:"; return manual(); }
+    const src = ctx.createMediaStreamSource(stream), an = ctx.createAnalyser(); an.fftSize = 4096; src.connect(an);
+    const buf = new Float32Array(an.frequencyBinCount); const binHz = ctx.sampleRate/an.fftSize;
+    const freqs = [880, 1320, 1760]; let heard = 0;
+    for (let k=0;k<freqs.length;k++){
+      const f = freqs[k]; st.textContent = `Tonul ${k+1} din 3…`;
+      const osc = ctx.createOscillator(), g = ctx.createGain(); osc.frequency.value = f; g.gain.value = 0.6; osc.connect(g).connect(ctx.destination);
+      an.getFloatFrequencyData(buf); const bin = Math.round(f/binHz);
+      const base = Math.max(...buf.slice(bin-2,bin+3));
+      osc.start(); let best = -200;
+      const t0 = performance.now();
+      await new Promise(res => { const tick = () => { an.getFloatFrequencyData(buf); const v = Math.max(...buf.slice(bin-2,bin+3)); best = Math.max(best,v); m.style.width = Math.max(0,Math.min(100,(v+100)*1.4))+"%"; if (performance.now()-t0 < 900) requestAnimationFrame(tick); else res(); }; tick(); });
+      osc.stop(); if (best > -60 && best - base > 15) heard++;
+      await new Promise(r=>setTimeout(r,250));
+    }
+    stream.getTracks().forEach(t=>t.stop()); ctx.close(); m.style.width = "0";
+    if (heard >= 2) { st.textContent = `Am auzit ${heard} din 3 tonuri. Difuzorul și microfonul funcționează.`; document.getElementById("after").innerHTML = `<button class="primary" id="c">Continuă</button>`; document.getElementById("c").onclick = () => done("audio","p",`${heard}/3 tonuri detectate automat`); }
+    else { st.textContent = `Am auzit doar ${heard} din 3 tonuri. Poate volumul e mic sau zgomotul e mare. Tu le-ai auzit clar?`; manual(heard); }
+    function manual(hh){ document.getElementById("after").innerHTML = `<div class="row"><button class="yes" data-a="p">Da, sunetul e clar</button><button class="no" data-a="f">Nu, e stins sau hârâie</button></div><button class="skip" data-a="s">Sari peste acest test</button>`;
+      app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => done("audio", b.dataset.a, hh!==undefined ? `${hh}/3 tonuri detectate, confirmat manual` : "Confirmat manual")); }
+  };
+},
+motion(){
+  h(`<h2>${titles.motion}</h2><p>Apasă butonul, apoi rotește și înclină telefonul câteva secunde. Verificăm accelerometrul și giroscopul, de care depind rotirea ecranului și unele jocuri.</p>
+  <p class="note" id="st"></p><button class="primary" id="go">Pornește</button><button class="skip" id="sk">Sari peste acest test</button>`);
+  document.getElementById("sk").onclick = () => done("motion","s","Sărit");
+  document.getElementById("go").onclick = async (ev) => {
+    ev.target.disabled = true; const st = document.getElementById("st");
+    try{ if (typeof DeviceMotionEvent!=="undefined" && typeof DeviceMotionEvent.requestPermission==="function"){ const p = await DeviceMotionEvent.requestPermission(); if (p!=="granted") throw 0; } }
+    catch(e){ return done("motion","s","Permisiunea pentru senzori a fost refuzată"); }
+    let acc=0, rot=0; st.textContent = "Rotește telefonul…";
+    const onM = e => { const a = e.accelerationIncludingGravity; if (a && (a.x||a.y||a.z)) acc++; const r = e.rotationRate; if (r && (Math.abs(r.alpha||0)+Math.abs(r.beta||0)+Math.abs(r.gamma||0))>5) rot++; };
+    window.addEventListener("devicemotion",onM);
+    setTimeout(() => { window.removeEventListener("devicemotion",onM);
+      if (acc>5 && rot>3) done("motion","p","Accelerometru și giroscop active");
+      else if (acc>5) done("motion","f","Accelerometrul merge, giroscopul nu a răspuns");
+      else done("motion","s","Browserul nu a transmis date de la senzori"); }, 3500);
+  };
+},
+vibrate(){
+  if (!("vibrate" in navigator)) { R.vibrate = {s:"s", note: isIOS ? "Nu se poate testa din browser pe iPhone" : "Browserul nu permite testul"}; return next(); }
+  h(`<h2>${titles.vibrate}</h2><p>Apasă butonul. Telefonul ar trebui să vibreze de trei ori.</p><button class="primary" id="go">Vibrează</button><div id="q" hidden><p style="margin-top:14px">A vibrat?</p>${answer()}</div>`);
+  document.getElementById("go").onclick = () => { navigator.vibrate([300,150,300,150,300]); document.getElementById("q").hidden = false; bindAnswer("vibrate"); };
+},
+biometric(){
+  h(`<h2>${titles.biometric}</h2><p>Blochează ecranul și deblochează-l cu ${isIOS ? "Face ID sau Touch ID" : "amprenta sau recunoașterea feței"}. Apoi revino aici.</p>
+  <p>Deblocarea a mers din prima încercare?</p>
+  <div class="row"><button class="yes" data-a="p">Da, a mers</button><button class="no" data-a="f">Nu a mers</button></div>
+  <button class="skip" data-a="s">Telefonul nu are această funcție</button>
+  <p class="note" style="margin-top:12px">Acest test e declarat de vânzător. Verifică-l și tu la predare.</p>`);
+  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => done("biometric", b.dataset.a, b.dataset.a==="s" ? "Fără senzor biometric" : "Declarat de vânzător"));
+},
+async battery(){
+  let line = "Browserul nu arată nivelul bateriei.";
+  try{ if (navigator.getBattery){ const b = await navigator.getBattery(); line = `Nivel acum: ${Math.round(b.level*100)}%${b.charging?", se încarcă":""}.`; } }catch(e){}
+  h(`<h2>${titles.battery}</h2><p>${line}</p>
+  <p>Sănătatea bateriei nu poate fi citită din browser, așa că o luăm dintr-o captură de ecran la pasul următor.</p>
+  <div class="card small">${isIOS ? "Pe iPhone: <b>Setări → Baterie → Sănătatea bateriei și încărcarea</b>." : "Pe Android, locul diferă: caută „Sănătate baterie” sau „Battery health” în Setări. Unele modele nu o afișează deloc."}</div>
+  <button class="primary" id="c">Continuă</button>`);
+  document.getElementById("c").onclick = () => { R.battery = {s:"s", note: line}; next(); };
+},
+shots(){
+  const items = [
+    ["about","Modelul și memoria", isIOS ? "Captură din Setări → General → Despre. Acolo apar numele modelului, capacitatea și IMEI-ul." : "Captură din Setări → Despre telefon. Acolo apar modelul și, de obicei, memoria și IMEI-ul."],
+    ["imei","IMEI-ul", "Formează <b>*#06#</b> pe tastatura de apel și fă o captură de ecran."],
+    ["bat","Sănătatea bateriei", isIOS ? "Captură din Setări → Baterie → Sănătatea bateriei." : "Captură din ecranul cu starea bateriei, dacă telefonul îl are."],
+    ["acc", isIOS ? "„Găsește iPhone-ul meu” dezactivat" : "Contul Google scos de pe telefon", isIOS ? "Captură din Setări → [numele tău] → Găsește → Găsește iPhone-ul meu, unde trebuie să scrie Dezactivat." : "Captură din Setări → Conturi, fără niciun cont Google. Altfel, după resetare telefonul rămâne blocat pe contul vechi."]
+  ];
+  h(`<h2>${titles.shots}</h2><p>Trei capturi pe care cumpărătorul nu le poate verifica altfel. Fă capturile, apoi încarcă-le aici.</p>
+  ${items.map(([k,t,d]) => `<label class="up" id="lab-${k}"><input type="file" accept="image/*" data-k="${k}">${shots[k] ? `<img src="${shots[k].url}" alt="">` : `<span class="ph">+</span>`}<span><b>${t}</b><br><span class="small muted">${d}</span></span></label>`).join("")}
+  <div id="auto" hidden><button class="ghost" id="read">Citește automat datele din capturi</button><p class="note" id="readSt"></p></div>
+  <div class="field"><span>Model</span><input type="text" id="fModel2" placeholder="de ex. Galaxy S23 256 GB" value="${esc(info.model || detected)}"></div>
+  <div class="field"><span>IMEI</span><input type="text" inputmode="numeric" id="fImei" maxlength="17" placeholder="15 cifre" value="${info.imei}"></div>
+  <div class="field"><span>Sănătatea bateriei (%)</span><input type="number" min="0" max="100" id="fBat" placeholder="de ex. 87" value="${info.battery}"></div>
+  <div class="field"><span>${isIOS ? "Găsește iPhone-ul meu" : "Cont Google pe telefon"}</span>
+    <div class="row" style="margin-top:4px"><button type="button" class="ghost" data-acc="off">${isIOS ? "Dezactivat" : "Niciun cont"}</button><button type="button" class="ghost" data-acc="on">${isIOS ? "Activat" : "Mai e un cont"}</button></div></div>
+  <button class="primary" id="c" style="margin-top:16px">Generează raportul</button>`);
+  const paintAcc = () => app.querySelectorAll("[data-acc]").forEach(b => { const on = b.dataset.acc===info.account; b.style.borderColor = on ? "var(--accent)" : ""; b.setAttribute("aria-pressed", on); });
+  app.querySelectorAll("[data-acc]").forEach(b => b.onclick = () => { info.account = b.dataset.acc; paintAcc(); }); paintAcc();
+  app.querySelectorAll("input[type=file]").forEach(inp => inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return; if (shots[inp.dataset.k]) URL.revokeObjectURL(shots[inp.dataset.k].url);
+    shots[inp.dataset.k] = {blob:f, url:URL.createObjectURL(f)};
+    const lab = document.getElementById("lab-"+inp.dataset.k); const ph = lab.querySelector(".ph,img");
+    const img = document.createElement("img"); img.src = shots[inp.dataset.k].url; img.alt = ""; ph.replaceWith(img); showAuto();
+  });
+  const showAuto = () => { document.getElementById("auto").hidden = !(sampleImages && Object.keys(shots).length); };
+  showAuto();
+  const readBtn = document.getElementById("read");
+  readBtn.onclick = async () => {
+    const st = document.getElementById("readSt"); readBtn.disabled = true; st.textContent = "Citesc capturile…";
+    try{
+      const keys = Object.keys(shots); const blobs = keys.map(k => shots[k].blob);
+      const prompt = `Primești ${blobs.length} capturi de ecran de pe un telefon, în această ordine: ${keys.map(k=>({about:"ecranul Despre telefon",imei:"ecranul *#06# cu IMEI-ul",bat:"ecranul cu sănătatea bateriei",acc:"setarea Găsește iPhone-ul meu sau lista de conturi"}[k])).join("; ")}. Extrage doar ce se vede clar. Răspunde numai cu JSON de forma {"model": string sau null (numele comercial al telefonului și memoria, dacă se văd, de ex. iPhone 13 Pro 128 GB), "imei": string sau null (primul IMEI, doar cifre), "batteryHealth": număr 0-100 sau null, "accountLock": "off" dacă Găsește iPhone-ul meu e dezactivat sau nu există cont Google, "on" dacă e activat sau există cont, null dacă nu se vede}.`;
+      const out = await sample.json(prompt, {images: blobs, modelTier:"quick"});
+      if (out.model) { info.model = String(out.model); document.getElementById("fModel2").value = info.model; }
+      if (out.imei) { info.imei = String(out.imei).replace(/\D/g,""); document.getElementById("fImei").value = info.imei; }
+      if (out.batteryHealth != null) { info.battery = String(out.batteryHealth); document.getElementById("fBat").value = info.battery; }
+      if (out.accountLock === "off" || out.accountLock === "on") { info.account = out.accountLock; paintAcc(); }
+      st.textContent = "Am completat ce am putut citi. Verifică valorile înainte să continui.";
+    }catch(e){ st.textContent = (e && e.code === "not_granted") ? "Citirea automată nu e permisă aici. Completează manual." : "Nu am putut citi capturile. Completează manual."; }
+    readBtn.disabled = false;
+  };
+  document.getElementById("c").onclick = () => {
+    const mv = document.getElementById("fModel2").value.trim(); if (mv) info.model = mv;
+    info.imei = document.getElementById("fImei").value.replace(/\D/g,""); info.battery = document.getElementById("fBat").value.trim(); next();
+  };
+},
+report(){
+  const code = (crypto.getRandomValues(new Uint32Array(1))[0] % 0xFFFFFF).toString(36).toUpperCase().padStart(5,"0").slice(-5);
+  const when = new Date().toLocaleString("ro-RO",{dateStyle:"medium",timeStyle:"short"});
+  const order = ["screen","touch","camera","audio","motion","vibrate","biometric"];
+  const names = {screen:"Ecran",touch:"Atingere",camera:"Camere",audio:"Difuzor și microfon",motion:"Senzori de mișcare",vibrate:"Vibrație",biometric:"Deblocare biometrică"};
+  const fails = order.filter(k => R[k] && R[k].s==="f");
+  const imeiOk = /^\d{15}$/.test(info.imei) && luhn(info.imei);
+  const bat = info.battery ? Number(info.battery) : null;
+  const batLow = bat !== null && bat < 80;
+  const locked = info.account === "on";
+  const bad = fails.length || locked;
+  const sym = s => s==="p" ? "✓" : s==="f" ? "✗" : "–";
+  const extra = [
+    ["IMEI", info.imei ? info.imei + (imeiOk ? "" : " (format neobișnuit, verifică)") : "necompletat", info.imei ? (imeiOk?"p":"f") : "s"],
+    ["Sănătatea bateriei", bat!==null ? bat+"%"+(batLow?" – sub 80%, bateria e uzată":"") : "necompletat", bat===null?"s":batLow?"f":"p"],
+    [isIOS ? "Găsește iPhone-ul meu" : "Cont Google", info.account==="off" ? (isIOS?"Dezactivat":"Niciun cont") : info.account==="on" ? (isIOS?"ACTIVAT – nu cumpăra până nu e dezactivat":"Mai e un cont pe telefon") : "nedeclarat", info.account==="off"?"p":info.account==="on"?"f":"s"]
+  ];
+  const summary = [
+    `Raport Bifat – cod ${code}`, `${deviceGuess()}, testat pe ${when}`, "",
+    ...order.map(k => `${sym(R[k]?.s||"s")} ${names[k]}${R[k]?.note ? " ("+R[k].note+")" : ""}`),
+    ...extra.map(([t,v,s]) => `${sym(s)} ${t}: ${v}`), "",
+    "La predare, cere-i vânzătorului să formeze *#06# și compară IMEI-ul."
+  ].join("\n");
+  h(`<h2>Raportul e gata</h2>
+  <div class="tag" id="tagEl">
+    <div class="stamp ${bad?"warn":""}">${bad ? "Atenție" : "Bifat"}</div>
+    <div class="kv"><b>Telefon</b><span>${esc(deviceGuess())}</span><b>Testat</b><span>${when}</span></div>
+    <div class="small muted" style="margin-top:8px">Cod raport</div><div class="code">${code}</div>
+    <ul class="list" style="margin-top:12px">
+      ${order.map(k => `<li><span class="mark ${R[k]?.s||"s"}" aria-label="${({p:"trecut",f:"problemă",s:"netestat"})[R[k]?.s||"s"]}">${sym(R[k]?.s||"s")}</span><span><b>${names[k]}</b>${R[k]?.note ? `<br><span class="small muted">${esc(R[k].note)}</span>` : ""}</span></li>`).join("")}
+      ${extra.map(([t,v,s]) => `<li><span class="mark ${s}">${sym(s)}</span><span><b>${t}</b><br><span class="small muted">${esc(v)}</span></span></li>`).join("")}
+    </ul>
+    ${Object.keys(shots).length ? `<div class="thumbs">${Object.values(shots).map(s=>`<img src="${s.url}" alt="Captură de ecran atașată">`).join("")}</div>` : ""}
+  </div>
+  <div class="card"><b>Trimite rezultatul cumpărătorului</b><p class="small muted" style="margin:6px 0 10px">Copiază textul în chatul OLX. Capturile le trimiți separat ca poze.</p>
+  <textarea id="sum" readonly>${esc(summary)}</textarea>
+  <button class="primary" id="copy" style="margin-top:10px">Copiază rezumatul</button><p class="note" id="cst"></p>
+  <button class="ghost" id="pdf" style="margin-top:6px">Descarcă raportul ca PDF</button><p class="note" id="pst"></p></div>
+  <p class="note">Prototip: raportul e salvat doar pe acest telefon. În versiunea finală, linkul raportului va putea fi deschis direct de cumpărător.</p>
+  <button class="ghost" id="again">Testează din nou</button>`);
+  document.getElementById("copy").onclick = async () => {
+    const ta = document.getElementById("sum"), st = document.getElementById("cst");
+    try{ await navigator.clipboard.writeText(ta.value); st.textContent = "Copiat. Lipește-l în chatul OLX."; }
+    catch(e){ ta.focus(); ta.select(); try{ document.execCommand("copy"); st.textContent = "Copiat. Lipește-l în chatul OLX."; }catch(_){ st.textContent = "Selectează textul și copiază-l manual."; } }
+  };
+  document.getElementById("pdf").onclick = async (ev) => {
+    const b = ev.currentTarget, st = document.getElementById("pst");
+    if (!window.jspdf || !window.html2canvas){ st.textContent = "Generatorul de PDF se încarcă încă. Încearcă din nou peste câteva secunde."; return; }
+    b.disabled = true; st.textContent = "Generez PDF-ul…";
+    try{
+      const blob = await makePdf(code);
+      const fn = `raport-bifat-${code}.pdf`;
+      const dl = (window.claude && window.claude.use) ? await window.claude.use("downloads") : null;
+      if (dl){
+        try{ await dl.save({filename: fn, data: blob}); st.textContent = "PDF-ul e gata. Îl poți trimite cumpărătorului."; }
+        catch(e){ st.textContent = "Salvarea a fost anulată sau nu e disponibilă aici."; }
+      } else {
+        const file = new File([blob], fn, {type:"application/pdf"});
+        if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:"Raport Bifat " + code}); st.textContent = "PDF trimis."; }
+        else { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fn; document.body.appendChild(a); a.click(); a.remove(); st.textContent = "PDF-ul a fost descărcat."; }
+      }
+    }catch(e){ st.textContent = "Nu am putut genera PDF-ul. Folosește rezumatul copiat."; }
+    b.disabled = false;
+  };
+  document.getElementById("again").onclick = () => { for (const k in R) delete R[k]; go(0); };
+}
+};
+function lbl(s){ return s==="p" ? "OK" : s==="f" ? "problemă" : "netestată"; }
+function loadImg(src){ return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+async function makePdf(code){
+  const { jsPDF } = window.jspdf;
+  const tag = document.getElementById("tagEl");
+  const canvas = await window.html2canvas(tag, {scale: 2, backgroundColor: "#FFFFFF", onclone: d => d.documentElement.setAttribute("data-theme", "light")});
+  const pdf = new jsPDF({unit: "mm", format: "a4"});
+  const PW = 210, PH = 297, M = 12, W = PW - 2*M;
+  const pagePx = Math.floor((PH - 2*M) * canvas.width / W);
+  for (let y = 0, first = true; y < canvas.height; y += pagePx, first = false){
+    const sh = Math.min(pagePx, canvas.height - y);
+    const c = document.createElement("canvas"); c.width = canvas.width; c.height = sh;
+    c.getContext("2d").drawImage(canvas, 0, y, canvas.width, sh, 0, 0, canvas.width, sh);
+    if (!first) pdf.addPage();
+    pdf.addImage(c.toDataURL("image/jpeg", 0.92), "JPEG", M, M, W, sh * W / canvas.width);
+  }
+  const labels = {about: "Despre telefon", imei: "IMEI (*#06#)", bat: "Sănătatea bateriei", acc: isIOS ? "Găsește iPhone-ul meu" : "Conturi Google"};
+  for (const [k, s] of Object.entries(shots)){
+    const img = await loadImg(s.url);
+    const head = Math.round(img.naturalWidth * 0.08);
+    const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight + head;
+    const g = c.getContext("2d"); g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = "#13202E"; g.font = `700 ${Math.round(head*0.45)}px Archivo, Arial, sans-serif`; g.fillText(`Raport ${code} – ${labels[k] || k}`, Math.round(head*0.2), Math.round(head*0.65));
+    g.drawImage(img, 0, head);
+    let w = W, h = c.height * W / c.width; if (h > PH - 2*M){ h = PH - 2*M; w = c.width * h / c.height; }
+    pdf.addPage(); pdf.addImage(c.toDataURL("image/jpeg", 0.88), "JPEG", (PW - w)/2, M, w, h);
+  }
+  return pdf.output("blob");
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]); }
+function luhn(n){ let s=0; for (let i=0;i<n.length;i++){ let d=+n[n.length-1-i]; if (i%2){ d*=2; if (d>9) d-=9; } s+=d; } return s%10===0; }
+
+go(0);
+detectModel().then(() => { if (idx === 0 && detected) render.intro(); });
+if (window.claude && window.claude.use){
+  window.claude.use("sample").then(async s => { if (!s) return; sample = s; try{ const l = await s.limits(); sampleImages = !!(l && l.images); }catch(e){} }).catch(()=>{});
+}
+})();
+</script>
+</body>
+</html>
